@@ -1,22 +1,30 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Courier & Logistics API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: tracking
+    description: Package tracking
+  - name: shipments
+    description: Shipment management
+  - name: services
+    description: Delivery services
+  - name: contact
+    description: Contact and support
+  - name: dashboard
+    description: Customer dashboard
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,170 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /track/{trackingNumber}:
+    get:
+      operationId: trackPackage
+      tags: [tracking]
+      summary: Track a package by tracking number
+      parameters:
+        - name: trackingNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tracking result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackingResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /shipments:
+    get:
+      operationId: listShipments
+      tags: [shipments]
+      summary: List all shipments for the customer
+      responses:
+        "200":
+          description: List of shipments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shipment"
+    post:
+      operationId: createShipment
+      tags: [shipments]
+      summary: Create a new shipment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShipmentInput"
+      responses:
+        "201":
+          description: Shipment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shipment"
+
+  /shipments/{id}:
+    get:
+      operationId: getShipment
+      tags: [shipments]
+      summary: Get a shipment by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Shipment details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shipment"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /services:
+    get:
+      operationId: listServices
+      tags: [services]
+      summary: List all delivery services and pricing
+      responses:
+        "200":
+          description: List of services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeliveryService"
+
+  /contact:
+    post:
+      operationId: submitContact
+      tags: [contact]
+      summary: Submit a contact form
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactInput"
+      responses:
+        "200":
+          description: Message received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactResponse"
+
+  /pickup:
+    post:
+      operationId: schedulePickup
+      tags: [contact]
+      summary: Schedule a pickup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PickupInput"
+      responses:
+        "200":
+          description: Pickup scheduled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PickupResponse"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard summary statistics
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/recent:
+    get:
+      operationId: getRecentShipments
+      tags: [dashboard]
+      summary: Get recent shipments for the dashboard
+      responses:
+        "200":
+          description: Recent shipments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shipment"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +203,179 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    TrackingEvent:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        location:
+          type: string
+        status:
+          type: string
+        description:
+          type: string
+      required: [timestamp, location, status, description]
+
+    TrackingResult:
+      type: object
+      properties:
+        trackingNumber:
+          type: string
+        status:
+          type: string
+        estimatedDelivery:
+          type: ["string", "null"]
+        origin:
+          type: string
+        destination:
+          type: string
+        service:
+          type: string
+        weight:
+          type: ["string", "null"]
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrackingEvent"
+      required: [trackingNumber, status, origin, destination, service, events]
+
+    Shipment:
+      type: object
+      properties:
+        id:
+          type: integer
+        trackingNumber:
+          type: string
+        status:
+          type: string
+        service:
+          type: string
+        origin:
+          type: string
+        destination:
+          type: string
+        estimatedDelivery:
+          type: ["string", "null"]
+        weight:
+          type: ["string", "null"]
+        cost:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+        insured:
+          type: boolean
+      required: [id, trackingNumber, status, service, origin, destination, createdAt, insured]
+
+    ShipmentInput:
+      type: object
+      properties:
+        service:
+          type: string
+        origin:
+          type: string
+        destination:
+          type: string
+        weight:
+          type: string
+        insured:
+          type: boolean
+      required: [service, origin, destination, weight]
+
+    DeliveryService:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        deliveryTime:
+          type: string
+        priceFrom:
+          type: number
+        category:
+          type: string
+        features:
+          type: array
+          items:
+            type: string
+      required: [id, name, description, deliveryTime, priceFrom, category, features]
+
+    ContactInput:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        subject:
+          type: string
+        message:
+          type: string
+      required: [name, email, subject, message]
+
+    ContactResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required: [success, message]
+
+    PickupInput:
+      type: object
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        date:
+          type: string
+        timeSlot:
+          type: string
+        phone:
+          type: string
+        notes:
+          type: ["string", "null"]
+      required: [name, address, city, date, timeSlot, phone]
+
+    PickupResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        confirmationCode:
+          type: string
+        message:
+          type: string
+      required: [success, confirmationCode, message]
+
+    DashboardStats:
+      type: object
+      properties:
+        totalShipments:
+          type: integer
+        activeShipments:
+          type: integer
+        deliveredThisMonth:
+          type: integer
+        pendingPickups:
+          type: integer
+        totalSpent:
+          type: number
+      required: [totalShipments, activeShipments, deliveredThisMonth, pendingPickups, totalSpent]
