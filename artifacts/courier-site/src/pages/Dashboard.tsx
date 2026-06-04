@@ -1,501 +1,328 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
+import {
+  useGetDashboardStats,
+  useGetRecentShipments,
+  useListShipments,
+} from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useGetDashboardStats, useGetRecentShipments, useListShipments, useCreateShipment, useGetShipment, useHealthCheck } from "@workspace/api-client-react";
-import { Package, Clock, CheckCircle2, Truck, Plus, FileText, Settings, User, Eye, Activity } from "lucide-react";
-import { format } from "date-fns";
-import { Link } from "wouter";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useToast } from "@/hooks/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Package, TrendingUp, Clock, CheckCircle, DollarSign, Loader2, MapPin, ExternalLink } from "lucide-react";
 
-const shipmentSchema = z.object({
-  service: z.string().min(1, "Service is required"),
-  origin: z.string().min(2, "Origin is required"),
-  destination: z.string().min(2, "Destination is required"),
-  weight: z.string().min(1, "Weight is required"),
-  insured: z.boolean().optional()
-});
+type Tab = "overview" | "shipments" | "account";
+
+function statusColor(status: string) {
+  const s = status.toLowerCase();
+  if (s.includes("delivered")) return "bg-green-100 text-green-800";
+  if (s.includes("out")) return "bg-orange-100 text-orange-800";
+  if (s.includes("transit")) return "bg-purple-100 text-purple-800";
+  if (s.includes("processing")) return "bg-blue-100 text-blue-800";
+  return "bg-gray-100 text-gray-700";
+}
 
 export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [, setLocation] = useLocation();
+
   useEffect(() => {
-    document.title = "Dashboard | SwiftLink Logistics";
+    document.title = "My Dashboard | FedEx";
   }, []);
 
-  const { toast } = useToast();
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
-  const { data: recentShipments, isLoading: recentLoading } = useGetRecentShipments();
-  const { data: allShipments, isLoading: allLoading, refetch: refetchAll } = useListShipments();
-  const { data: healthData } = useHealthCheck();
+  const { data: recent, isLoading: recentLoading } = useGetRecentShipments();
+  const { data: allShipments, isLoading: allLoading } = useListShipments();
 
-  const createShipment = useCreateShipment();
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [viewShipmentId, setViewShipmentId] = useState<number | null>(null);
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "shipments", label: "My Shipments" },
+    { id: "account", label: "Account Settings" },
+  ];
 
-  const { data: shipmentDetails, isLoading: shipmentLoading } = useGetShipment(
-    viewShipmentId as number,
-    { query: { enabled: !!viewShipmentId, queryKey: ['shipment', viewShipmentId] } }
-  );
-
-  const form = useForm<z.infer<typeof shipmentSchema>>({
-    resolver: zodResolver(shipmentSchema),
-    defaultValues: {
-      service: "",
-      origin: "",
-      destination: "",
-      weight: "",
-      insured: false
-    }
-  });
-
-  const onSubmitCreate = (data: z.infer<typeof shipmentSchema>) => {
-    createShipment.mutate(
-      { data },
-      {
-        onSuccess: () => {
-          toast({ title: "Shipment created successfully" });
-          setIsCreateOpen(false);
-          form.reset();
-          refetchAll();
-        },
-        onError: () => {
-          toast({ variant: "destructive", title: "Failed to create shipment" });
-        }
-      }
-    );
-  };
+  const statCards = [
+    {
+      label: "Total Shipments",
+      value: stats?.totalShipments ?? 0,
+      icon: Package,
+      color: "#4D148C",
+      loading: statsLoading,
+    },
+    {
+      label: "Active Shipments",
+      value: stats?.activeShipments ?? 0,
+      icon: TrendingUp,
+      color: "#FF6200",
+      loading: statsLoading,
+    },
+    {
+      label: "Delivered This Month",
+      value: stats?.deliveredThisMonth ?? 0,
+      icon: CheckCircle,
+      color: "#4D148C",
+      loading: statsLoading,
+    },
+    {
+      label: "Total Spent",
+      value: stats ? `$${stats.totalSpent.toFixed(2)}` : "$0.00",
+      icon: DollarSign,
+      color: "#FF6200",
+      loading: statsLoading,
+    },
+  ];
 
   return (
     <Layout>
-      <div className="bg-slate-50 min-h-screen py-10 border-t border-border">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-              <p className="text-muted-foreground mt-1">Welcome back. Here is your shipping overview.</p>
-              {healthData && (
-                <p className="text-xs text-green-600 mt-2 flex items-center">
-                  <Activity className="w-3 h-3 mr-1" /> API Status: {healthData.status}
-                </p>
-              )}
-            </div>
-            <div className="flex gap-3 w-full md:w-auto">
-              <Link href="/schedule-pickup">
-                <Button variant="outline" className="w-full md:w-auto">
-                  <Clock className="mr-2 h-4 w-4" /> Schedule Pickup
-                </Button>
-              </Link>
-              <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-primary/90 shadow-sm w-full md:w-auto">
-                    <Plus className="mr-2 h-4 w-4" /> New Shipment
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create New Shipment</DialogTitle>
-                    <DialogDescription>Enter the basic details to generate a shipping label.</DialogDescription>
-                  </DialogHeader>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmitCreate)} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="service"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Service Level</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a service" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="Express Delivery">Express Delivery</SelectItem>
-                                <SelectItem value="Standard Domestic">Standard Domestic</SelectItem>
-                                <SelectItem value="International Air">International Air</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="origin"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Origin</FormLabel>
-                            <FormControl>
-                              <Input placeholder="San Francisco, CA" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="destination"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Destination</FormLabel>
-                            <FormControl>
-                              <Input placeholder="New York, NY" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="weight"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Weight (lbs)</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder="5" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit" className="w-full" disabled={createShipment.isPending}>
-                        {createShipment.isPending ? "Creating..." : "Create Shipment"}
-                      </Button>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            </div>
+      {/* Header */}
+      <div className="bg-[#4D148C] py-10">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-4xl font-black text-white mb-1">My FedEx Dashboard</h1>
+            <p className="text-purple-200">Manage your shipments, track packages, and view account details.</p>
           </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setLocation("/schedule-pickup")}
+              className="bg-[#FF6200] hover:bg-[#e05600] text-white font-bold text-sm px-5 py-2.5 rounded-sm transition-colors"
+              data-testid="btn-dashboard-pickup"
+            >
+              Schedule Pickup
+            </button>
+            <button
+              onClick={() => setLocation("/track")}
+              className="bg-white/10 hover:bg-white/20 text-white font-bold text-sm px-5 py-2.5 rounded-sm transition-colors border border-white/20"
+              data-testid="btn-dashboard-track"
+            >
+              Track Package
+            </button>
+          </div>
+        </div>
+      </div>
 
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-grid mb-8">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="shipments">All Shipments</TabsTrigger>
-              <TabsTrigger value="settings">Account Settings</TabsTrigger>
-            </TabsList>
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex gap-0">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                data-testid={`tab-${tab.id}`}
+                className={`px-5 py-4 text-sm font-bold border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? "border-[#4D148C] text-[#4D148C]"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-            <TabsContent value="overview" className="space-y-8 animate-in fade-in-50">
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="shadow-sm border-slate-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium text-slate-500">Active Shipments</h3>
-                      <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                        <Truck className="h-5 w-5" />
+      <div className="bg-gray-50 min-h-screen py-8">
+        <div className="max-w-7xl mx-auto px-4">
+          {/* Overview Tab */}
+          {activeTab === "overview" && (
+            <div className="space-y-6">
+              {/* Stat cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {statCards.map((card) => (
+                  <div key={card.label} className="bg-white border border-gray-200 rounded-sm p-5 shadow-sm">
+                    <div className="flex items-start justify-between mb-3">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{card.label}</p>
+                      <div className="w-8 h-8 rounded-sm flex items-center justify-center" style={{ backgroundColor: card.color + "15" }}>
+                        <card.icon className="h-4 w-4" style={{ color: card.color }} />
                       </div>
                     </div>
-                    <div className="text-3xl font-bold text-slate-900">
-                      {statsLoading ? "..." : stats?.activeShipments || 0}
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="shadow-sm border-slate-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium text-slate-500">Delivered (Month)</h3>
-                      <div className="p-2 bg-green-100 text-green-600 rounded-lg">
-                        <CheckCircle2 className="h-5 w-5" />
-                      </div>
-                    </div>
-                    <div className="text-3xl font-bold text-slate-900">
-                      {statsLoading ? "..." : stats?.deliveredThisMonth || 0}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-sm border-slate-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium text-slate-500">Pending Pickups</h3>
-                      <div className="p-2 bg-orange-100 text-secondary rounded-lg">
-                        <Clock className="h-5 w-5" />
-                      </div>
-                    </div>
-                    <div className="text-3xl font-bold text-slate-900">
-                      {statsLoading ? "..." : stats?.pendingPickups || 0}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-sm border-slate-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium text-slate-500">Total Spent (YTD)</h3>
-                      <div className="p-2 bg-slate-100 text-slate-600 rounded-lg">
-                        <FileText className="h-5 w-5" />
-                      </div>
-                    </div>
-                    <div className="text-3xl font-bold text-slate-900">
-                      ${statsLoading ? "..." : (stats?.totalSpent || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
-                    </div>
-                  </CardContent>
-                </Card>
+                    {card.loading
+                      ? <div className="h-8 w-20 bg-gray-100 animate-pulse rounded" />
+                      : <p className="text-2xl font-black text-gray-900">{card.value}</p>
+                    }
+                  </div>
+                ))}
               </div>
 
-              {/* Recent Shipments */}
-              <Card className="shadow-sm border-slate-200">
-                <CardHeader className="border-b border-border bg-white px-6 py-5 flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl">Recent Shipments</CardTitle>
+              {/* Recent shipments */}
+              <div className="bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                  <h3 className="font-black text-gray-900">Recent Shipments</h3>
+                  <button
+                    onClick={() => setActiveTab("shipments")}
+                    className="text-[#4D148C] text-xs font-bold hover:underline flex items-center gap-1"
+                  >
+                    View all <ExternalLink className="h-3 w-3" />
+                  </button>
+                </div>
+                {recentLoading ? (
+                  <div className="flex items-center justify-center py-12 gap-2 text-[#4D148C]">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span className="text-sm font-semibold">Loading shipments...</span>
                   </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {recentLoading ? (
-                    <div className="p-8 text-center text-muted-foreground">Loading shipments...</div>
-                  ) : recentShipments && recentShipments.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left">
-                        <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-border">
-                          <tr>
-                            <th className="px-6 py-4 font-medium">Tracking Number</th>
-                            <th className="px-6 py-4 font-medium">Date</th>
-                            <th className="px-6 py-4 font-medium">Destination</th>
-                            <th className="px-6 py-4 font-medium">Service</th>
-                            <th className="px-6 py-4 font-medium">Status</th>
-                            <th className="px-6 py-4 font-medium text-right">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border bg-white">
-                          {recentShipments.map((shipment) => (
-                            <tr key={shipment.id} className="hover:bg-slate-50 transition-colors">
-                              <td className="px-6 py-4 font-mono font-medium text-slate-900">
-                                {shipment.trackingNumber}
-                              </td>
-                              <td className="px-6 py-4 text-slate-600">
-                                {format(new Date(shipment.createdAt), "MMM dd, yyyy")}
-                              </td>
-                              <td className="px-6 py-4 text-slate-600">
-                                {shipment.destination}
-                              </td>
-                              <td className="px-6 py-4 text-slate-600">
-                                {shipment.service}
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  shipment.status === 'Delivered' ? 'bg-green-100 text-green-800' :
-                                  shipment.status === 'In Transit' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-orange-100 text-orange-800'
-                                }`}>
-                                  {shipment.status}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => setViewShipmentId(shipment.id)} className="h-8 w-8 p-0 text-slate-600 hover:text-primary">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Link href={`/track?number=${shipment.trackingNumber}`}>
-                                  <Button variant="ghost" size="sm" className="h-8 text-primary hover:text-primary/80 hover:bg-primary/10">
-                                    Track
-                                  </Button>
-                                </Link>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="p-12 text-center flex flex-col items-center">
-                      <div className="bg-slate-100 p-4 rounded-full mb-4">
-                        <Package className="h-8 w-8 text-slate-400" />
+                ) : (recent ?? []).length === 0 ? (
+                  <div className="text-center py-12">
+                    <Package className="h-12 w-12 text-gray-200 mx-auto mb-3" />
+                    <p className="text-gray-400 text-sm">No shipments yet</p>
+                    <button
+                      onClick={() => setLocation("/schedule-pickup")}
+                      className="mt-4 text-[#4D148C] text-sm font-bold hover:underline"
+                    >
+                      Create your first shipment
+                    </button>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {(recent ?? []).slice(0, 5).map((shipment) => (
+                      <div
+                        key={shipment.id}
+                        data-testid={`row-shipment-${shipment.id}`}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors gap-3"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-9 h-9 rounded-sm bg-purple-50 flex items-center justify-center flex-shrink-0">
+                            <Package className="h-4 w-4 text-[#4D148C]" />
+                          </div>
+                          <div>
+                            <p className="font-mono font-bold text-sm text-gray-900">{shipment.trackingNumber}</p>
+                            <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                              <MapPin className="h-3 w-3" />
+                              {shipment.origin} → {shipment.destination}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 sm:gap-6">
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-sm capitalize ${statusColor(shipment.status)}`}>
+                            {shipment.status}
+                          </span>
+                          <button
+                            onClick={() => setLocation(`/track?number=${shipment.trackingNumber}`)}
+                            className="text-[#4D148C] text-xs font-bold hover:underline whitespace-nowrap"
+                          >
+                            Track
+                          </button>
+                        </div>
                       </div>
-                      <h3 className="text-lg font-medium text-slate-900 mb-1">No shipments yet</h3>
-                      <p className="text-slate-500 mb-6 max-w-sm mx-auto">You haven't created any shipments. Schedule a pickup to get started.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="shipments" className="animate-in fade-in-50">
-              <Card className="shadow-sm border-slate-200">
-                <CardHeader className="border-b border-border bg-white px-6 py-5">
-                  <CardTitle className="text-xl">All Shipments</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {allLoading ? (
-                    <div className="p-8 text-center text-muted-foreground">Loading shipments...</div>
-                  ) : allShipments && allShipments.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm text-left">
-                        <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-border">
-                          <tr>
-                            <th className="px-6 py-4 font-medium">Tracking Number</th>
-                            <th className="px-6 py-4 font-medium">Date</th>
-                            <th className="px-6 py-4 font-medium">Origin</th>
-                            <th className="px-6 py-4 font-medium">Destination</th>
-                            <th className="px-6 py-4 font-medium">Status</th>
-                            <th className="px-6 py-4 font-medium text-right">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border bg-white">
-                          {allShipments.map((shipment) => (
-                            <tr key={shipment.id} className="hover:bg-slate-50 transition-colors">
-                              <td className="px-6 py-4 font-mono font-medium text-slate-900">
-                                {shipment.trackingNumber}
-                              </td>
-                              <td className="px-6 py-4 text-slate-600">
-                                {format(new Date(shipment.createdAt), "MMM dd, yyyy")}
-                              </td>
-                              <td className="px-6 py-4 text-slate-600">
-                                {shipment.origin}
-                              </td>
-                              <td className="px-6 py-4 text-slate-600">
-                                {shipment.destination}
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  shipment.status === 'Delivered' ? 'bg-green-100 text-green-800' :
-                                  shipment.status === 'In Transit' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-orange-100 text-orange-800'
-                                }`}>
-                                  {shipment.status}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => setViewShipmentId(shipment.id)} className="h-8 w-8 p-0 text-slate-600 hover:text-primary">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Link href={`/track?number=${shipment.trackingNumber}`}>
-                                  <Button variant="ghost" size="sm" className="h-8 text-primary hover:text-primary/80 hover:bg-primary/10">
-                                    Track
-                                  </Button>
-                                </Link>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="p-12 text-center text-muted-foreground">
-                      No shipments found.
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="settings" className="animate-in fade-in-50">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="bg-primary/10 p-2 rounded-full">
-                        <User className="h-5 w-5 text-primary" />
-                      </div>
-                      <CardTitle>Profile Details</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-slate-500">Name</p>
-                      <p className="font-medium text-slate-900">Acme Corporation</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-slate-500">Email</p>
-                      <p className="font-medium text-slate-900">logistics@acmecorp.com</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-slate-500">Account Type</p>
-                      <p className="font-medium text-slate-900">Business Pro</p>
-                    </div>
-                    <Button variant="outline" className="mt-4">Edit Profile</Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="bg-primary/10 p-2 rounded-full">
-                        <Settings className="h-5 w-5 text-primary" />
-                      </div>
-                      <CardTitle>Preferences</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-slate-900">Email Notifications</p>
-                        <p className="text-sm text-slate-500">Receive updates on shipment status</p>
-                      </div>
-                      <div className="h-6 w-11 bg-primary rounded-full relative">
-                        <div className="absolute right-1 top-1 h-4 w-4 bg-white rounded-full"></div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-slate-900">SMS Alerts</p>
-                        <p className="text-sm text-slate-500">Get delivery confirmations via text</p>
-                      </div>
-                      <div className="h-6 w-11 bg-slate-200 rounded-full relative">
-                        <div className="absolute left-1 top-1 h-4 w-4 bg-white rounded-full shadow-sm"></div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    ))}
+                  </div>
+                )}
               </div>
-            </TabsContent>
-          </Tabs>
 
-          {/* View Shipment Dialog */}
-          <Dialog open={!!viewShipmentId} onOpenChange={(open) => !open && setViewShipmentId(null)}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Shipment Details</DialogTitle>
-              </DialogHeader>
-              {shipmentLoading ? (
-                <div className="p-6 text-center text-muted-foreground">Loading details...</div>
-              ) : shipmentDetails ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 border-b pb-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Tracking Number</p>
-                      <p className="font-mono font-medium">{shipmentDetails.trackingNumber}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Status</p>
-                      <p className="font-medium">{shipmentDetails.status}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 border-b pb-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Origin</p>
-                      <p className="font-medium">{shipmentDetails.origin}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Destination</p>
-                      <p className="font-medium">{shipmentDetails.destination}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Service</p>
-                      <p className="font-medium">{shipmentDetails.service}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Cost</p>
-                      <p className="font-medium">${shipmentDetails.cost?.toFixed(2) || "0.00"}</p>
-                    </div>
-                  </div>
+              {/* Quick actions */}
+              <div className="grid sm:grid-cols-3 gap-4">
+                {[
+                  { label: "Track a Package", desc: "Real-time shipment status", href: "/track", color: "#4D148C" },
+                  { label: "Schedule a Pickup", desc: "Free pickup from your location", href: "/schedule-pickup", color: "#FF6200" },
+                  { label: "Get a Rate Quote", desc: "Compare services and prices", href: "/pricing", color: "#4D148C" },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={() => setLocation(item.href)}
+                    className="bg-white border border-gray-200 rounded-sm p-5 text-left hover:shadow-md transition-shadow group"
+                  >
+                    <p className="font-black text-gray-900 text-sm mb-1 group-hover:text-[#4D148C] transition-colors">{item.label}</p>
+                    <p className="text-xs text-gray-400">{item.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* All Shipments Tab */}
+          {activeTab === "shipments" && (
+            <div className="bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="font-black text-gray-900">All Shipments</h3>
+                <span className="text-xs text-gray-400 font-medium">{(allShipments ?? []).length} total</span>
+              </div>
+              {allLoading ? (
+                <div className="flex items-center justify-center py-16 gap-2 text-[#4D148C]">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span className="text-sm font-semibold">Loading...</span>
+                </div>
+              ) : (allShipments ?? []).length === 0 ? (
+                <div className="text-center py-16">
+                  <Package className="h-16 w-16 text-gray-200 mx-auto mb-4" />
+                  <p className="text-gray-400 text-sm">No shipments found</p>
                 </div>
               ) : (
-                <div className="p-6 text-center text-muted-foreground">Failed to load shipment details.</div>
+                <>
+                  {/* Table header */}
+                  <div className="hidden md:grid grid-cols-5 gap-4 px-6 py-2 bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wide">
+                    <span>Tracking #</span>
+                    <span>Route</span>
+                    <span>Service</span>
+                    <span>Status</span>
+                    <span>Est. Delivery</span>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {(allShipments ?? []).map((shipment) => (
+                      <div
+                        key={shipment.id}
+                        data-testid={`row-all-shipment-${shipment.id}`}
+                        className="grid grid-cols-1 md:grid-cols-5 gap-2 md:gap-4 px-6 py-4 hover:bg-gray-50 transition-colors items-center"
+                      >
+                        <button
+                          onClick={() => setLocation(`/track?number=${shipment.trackingNumber}`)}
+                          className="font-mono text-sm font-bold text-[#4D148C] hover:underline text-left"
+                        >
+                          {shipment.trackingNumber}
+                        </button>
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{shipment.origin} → {shipment.destination}</span>
+                        </div>
+                        <span className="text-xs text-gray-600 font-medium capitalize">{shipment.service}</span>
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-sm capitalize w-fit ${statusColor(shipment.status)}`}>
+                          {shipment.status}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {shipment.estimatedDelivery
+                            ? new Date(shipment.estimatedDelivery).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                            : "Pending"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
-            </DialogContent>
-          </Dialog>
+            </div>
+          )}
 
+          {/* Account Tab */}
+          {activeTab === "account" && (
+            <div className="max-w-2xl">
+              <div className="bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
+                <div className="bg-[#4D148C] px-6 py-4">
+                  <h3 className="text-white font-black text-base">Account Information</h3>
+                </div>
+                <div className="p-6 space-y-5">
+                  {[
+                    { label: "Account Number", value: "FX-8847201-US" },
+                    { label: "Account Type", value: "FedEx Business Account" },
+                    { label: "Member Since", value: "January 2024" },
+                    { label: "Preferred Service", value: "FedEx Express" },
+                    { label: "Email Notifications", value: "Enabled" },
+                  ].map((item) => (
+                    <div key={item.label} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
+                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">{item.label}</span>
+                      <span className="text-sm font-semibold text-gray-900">{item.value}</span>
+                    </div>
+                  ))}
+                  <div className="pt-4">
+                    <button
+                      onClick={() => setLocation("/contact")}
+                      className="bg-[#FF6200] hover:bg-[#e05600] text-white font-bold text-sm px-6 py-2.5 rounded-sm transition-colors"
+                      data-testid="btn-account-contact"
+                    >
+                      Contact Account Manager
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 bg-purple-50 border border-purple-200 rounded-sm p-4 text-sm text-purple-800">
+                <strong>Demo Mode:</strong> This dashboard displays live data from the database. Shipments created via the API are shown in real time.
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Layout>

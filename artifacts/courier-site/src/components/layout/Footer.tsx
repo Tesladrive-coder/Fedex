@@ -1,80 +1,94 @@
 import { Link } from "wouter";
-import { Package, Facebook, Twitter, Instagram, Linkedin, MapPin, Phone, Mail } from "lucide-react";
+import { Facebook, Twitter, Instagram, Linkedin, Youtube } from "lucide-react";
 
 export function Footer() {
+  const sections = [
+    {
+      title: "FedEx Services",
+      links: [
+        { label: "FedEx Express", href: "/services" },
+        { label: "FedEx Ground", href: "/services" },
+        { label: "FedEx Freight", href: "/services" },
+        { label: "FedEx International", href: "/services" },
+        { label: "FedEx Office", href: "/services" },
+      ],
+    },
+    {
+      title: "Shipping & Tracking",
+      links: [
+        { label: "Track a Package", href: "/track" },
+        { label: "Schedule a Pickup", href: "/schedule-pickup" },
+        { label: "Create a Shipment", href: "/dashboard" },
+        { label: "Rates & Transit Times", href: "/pricing" },
+        { label: "Delivery Options", href: "/services" },
+      ],
+    },
+    {
+      title: "Customer Support",
+      links: [
+        { label: "Contact FedEx", href: "/contact" },
+        { label: "File a Claim", href: "/contact" },
+        { label: "FAQs", href: "/contact" },
+        { label: "Service Alerts", href: "/" },
+        { label: "Feedback", href: "/contact" },
+      ],
+    },
+    {
+      title: "About FedEx",
+      links: [
+        { label: "Our Company", href: "/" },
+        { label: "Investor Relations", href: "/" },
+        { label: "Newsroom", href: "/" },
+        { label: "Careers", href: "/" },
+        { label: "Sustainability", href: "/" },
+      ],
+    },
+  ];
+
   return (
-    <footer className="bg-slate-900 text-slate-300 pt-16 pb-8">
-      <div className="container mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
-          {/* Brand */}
-          <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-2 group inline-flex">
-              <div className="bg-secondary text-white p-2 rounded-lg">
-                <Package className="h-5 w-5" />
-              </div>
-              <span className="text-xl font-bold text-white tracking-tight">
-                SwiftLink Logistics
-              </span>
-            </Link>
-            <p className="text-sm text-slate-400 leading-relaxed max-w-xs">
-              Premium logistics and courier solutions connecting businesses and individuals worldwide with speed and reliability.
-            </p>
-            <div className="flex space-x-4 pt-2">
-              <a href="#" className="text-slate-400 hover:text-secondary transition-colors"><Facebook className="h-5 w-5" /></a>
-              <a href="#" className="text-slate-400 hover:text-secondary transition-colors"><Twitter className="h-5 w-5" /></a>
-              <a href="#" className="text-slate-400 hover:text-secondary transition-colors"><Instagram className="h-5 w-5" /></a>
-              <a href="#" className="text-slate-400 hover:text-secondary transition-colors"><Linkedin className="h-5 w-5" /></a>
+    <footer className="bg-gray-900 text-gray-400">
+      {/* Main footer grid */}
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+          {sections.map((section) => (
+            <div key={section.title}>
+              <h4 className="text-white font-bold text-sm mb-4 uppercase tracking-wide">{section.title}</h4>
+              <ul className="space-y-2">
+                {section.links.map((link) => (
+                  <li key={link.label}>
+                    <Link href={link.href} className="text-sm hover:text-white transition-colors">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
+          ))}
+        </div>
+
+        {/* Social + legal */}
+        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-baseline gap-0.5">
+            <span className="text-[#4D148C] font-black text-2xl tracking-tighter">Fed</span>
+            <span className="text-[#FF6200] font-black text-2xl tracking-tighter">Ex</span>
           </div>
 
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-white font-semibold mb-4 text-lg">Quick Links</h3>
-            <ul className="space-y-3">
-              <li><Link href="/track" className="hover:text-secondary transition-colors">Track Package</Link></li>
-              <li><Link href="/services" className="hover:text-secondary transition-colors">Our Services</Link></li>
-              <li><Link href="/pricing" className="hover:text-secondary transition-colors">Pricing & Rates</Link></li>
-              <li><Link href="/schedule-pickup" className="hover:text-secondary transition-colors">Schedule Pickup</Link></li>
-              <li><Link href="/dashboard" className="hover:text-secondary transition-colors">Customer Dashboard</Link></li>
-            </ul>
-          </div>
-
-          {/* Legal */}
-          <div>
-            <h3 className="text-white font-semibold mb-4 text-lg">Legal & Support</h3>
-            <ul className="space-y-3">
-              <li><Link href="/contact" className="hover:text-secondary transition-colors">Contact Us</Link></li>
-              <li><a href="#" className="hover:text-secondary transition-colors">FAQ & Help Center</a></li>
-              <li><a href="#" className="hover:text-secondary transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-secondary transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-secondary transition-colors">Prohibited Items</a></li>
-            </ul>
-          </div>
-
-          {/* Contact Info */}
-          <div>
-            <h3 className="text-white font-semibold mb-4 text-lg">Contact Us</h3>
-            <ul className="space-y-4">
-              <li className="flex items-start space-x-3">
-                <MapPin className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                <span className="text-sm leading-tight">100 Logistics Way, Suite 400<br/>San Francisco, CA 94107</span>
-              </li>
-              <li className="flex items-center space-x-3">
-                <Phone className="h-5 w-5 text-secondary shrink-0" />
-                <span className="text-sm">1-800-SWIFTLINK</span>
-              </li>
-              <li className="flex items-center space-x-3">
-                <Mail className="h-5 w-5 text-secondary shrink-0" />
-                <span className="text-sm">support@swiftlink.com</span>
-              </li>
-            </ul>
+          <div className="flex items-center gap-4">
+            <a href="#" aria-label="Facebook" className="hover:text-white transition-colors"><Facebook className="h-5 w-5" /></a>
+            <a href="#" aria-label="Twitter" className="hover:text-white transition-colors"><Twitter className="h-5 w-5" /></a>
+            <a href="#" aria-label="Instagram" className="hover:text-white transition-colors"><Instagram className="h-5 w-5" /></a>
+            <a href="#" aria-label="LinkedIn" className="hover:text-white transition-colors"><Linkedin className="h-5 w-5" /></a>
+            <a href="#" aria-label="YouTube" className="hover:text-white transition-colors"><Youtube className="h-5 w-5" /></a>
           </div>
         </div>
 
-        <div className="border-t border-slate-800 pt-8 mt-8 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500">
-          <p>&copy; {new Date().getFullYear()} SwiftLink Logistics. All rights reserved.</p>
-          <div className="mt-4 md:mt-0 space-x-4">
-            <span>Built on Replit</span>
+        <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-600">
+          <p>&copy; {new Date().getFullYear()} Federal Express Corporation. All rights reserved.</p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <a href="#" className="hover:text-gray-400 transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-gray-400 transition-colors">Terms of Use</a>
+            <a href="#" className="hover:text-gray-400 transition-colors">Security & Fraud</a>
+            <a href="#" className="hover:text-gray-400 transition-colors">Site Map</a>
           </div>
         </div>
       </div>

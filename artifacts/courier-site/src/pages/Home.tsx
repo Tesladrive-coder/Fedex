@@ -1,227 +1,311 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { motion } from "framer-motion";
-import { 
-  Search, Package, Globe, Clock, ShieldCheck, 
-  ArrowRight, CheckCircle2, MapPin
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Layout } from "@/components/layout/Layout";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Layout } from "@/components/layout/Layout";
+import {
+  Package, Globe, Zap, Shield, Clock, ArrowRight, ChevronRight, Truck
+} from "lucide-react";
 
-const trackingSchema = z.object({
-  trackingNumber: z.string().min(1, "Please enter a tracking number")
+const trackSchema = z.object({
+  trackingNumber: z.string().min(1, "Please enter a tracking number"),
 });
 
 export default function Home() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    document.title = "Home | SwiftLink Logistics";
+    document.title = "FedEx - Track, Ship, Manage";
   }, []);
 
-  const form = useForm<z.infer<typeof trackingSchema>>({
-    resolver: zodResolver(trackingSchema),
-    defaultValues: {
-      trackingNumber: ""
-    }
+  const form = useForm<z.infer<typeof trackSchema>>({
+    resolver: zodResolver(trackSchema),
+    defaultValues: { trackingNumber: "" },
   });
 
-  const onSubmit = (data: z.infer<typeof trackingSchema>) => {
-    setLocation(`/track?number=${encodeURIComponent(data.trackingNumber)}`);
+  const onSubmit = (data: z.infer<typeof trackSchema>) => {
+    setLocation(`/track?number=${encodeURIComponent(data.trackingNumber.trim())}`);
   };
 
   const services = [
-    { icon: Globe, title: "Global Freight", desc: "Seamless international shipping across 220+ countries with customs clearance." },
-    { icon: Clock, title: "Express Delivery", desc: "Same-day and next-day delivery options for urgent time-critical packages." },
-    { icon: ShieldCheck, title: "Secure Transport", desc: "Fully insured shipping for high-value items with continuous monitoring." }
+    {
+      icon: Zap,
+      color: "#FF6200",
+      title: "FedEx Express",
+      desc: "When it absolutely, positively has to be there overnight. Time-definite delivery by morning.",
+      href: "/services",
+    },
+    {
+      icon: Truck,
+      color: "#4D148C",
+      title: "FedEx Ground",
+      desc: "Cost-effective, day-definite delivery to every business and residential address in the US.",
+      href: "/services",
+    },
+    {
+      icon: Globe,
+      color: "#4D148C",
+      title: "FedEx International",
+      desc: "Customs-cleared delivery to more than 220 countries and territories worldwide.",
+      href: "/services",
+    },
+    {
+      icon: Shield,
+      color: "#FF6200",
+      title: "FedEx Freight",
+      desc: "Less-than-truckload (LTL) freight solutions for your heaviest and bulkiest shipments.",
+      href: "/services",
+    },
+  ];
+
+  const quickLinks = [
+    { label: "Create a Shipment", href: "/schedule-pickup", icon: Package },
+    { label: "Schedule a Pickup", href: "/schedule-pickup", icon: Clock },
+    { label: "Get Rates & Transit Times", href: "/pricing", icon: ArrowRight },
+    { label: "Open a FedEx Account", href: "/dashboard", icon: ChevronRight },
   ];
 
   return (
     <Layout>
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden bg-slate-900">
-        <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070&auto=format&fit=crop" 
-            alt="Logistics Warehouse" 
-            className="w-full h-full object-cover opacity-40 mix-blend-overlay"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/40" />
-        </div>
-
-        <div className="container relative z-10 mx-auto px-4 md:px-6">
-          <div className="max-w-3xl">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <span className="inline-block py-1 px-3 rounded-full bg-secondary/20 text-secondary text-sm font-semibold mb-4 border border-secondary/30">
-                Premium Global Logistics
-              </span>
-              <h1 className="text-4xl md:text-6xl font-bold text-white leading-tight mb-6">
-                Fast, Reliable Delivery <br />
-                <span className="text-secondary">Without Compromise.</span>
+      {/* Hero — FedEx style purple + tracking */}
+      <section className="bg-[#4D148C]">
+        <div className="max-w-7xl mx-auto px-4 py-12 md:py-20">
+          <div className="grid md:grid-cols-2 gap-10 items-center">
+            {/* Left: headline + tracking form */}
+            <div>
+              <h1 className="text-3xl md:text-5xl font-black text-white leading-tight mb-4">
+                Rely on us for all your shipping needs.
               </h1>
-              <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl">
-                We bridge distances with advanced logistics technology and a dedicated global network. Track your shipment in real-time.
+              <p className="text-purple-200 text-lg mb-8">
+                Track packages, schedule pickups, and ship with confidence to over 220 countries.
               </p>
-            </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="bg-white p-4 md:p-6 rounded-xl shadow-2xl max-w-2xl"
-            >
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col md:flex-row gap-3">
-                  <FormField
-                    control={form.control}
-                    name="trackingNumber"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormControl>
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-5 w-5" />
-                            <Input 
-                              placeholder="Enter your tracking number (e.g., SL-10294857)" 
-                              className="pl-10 h-14 text-lg bg-slate-50 border-transparent focus-visible:ring-secondary"
-                              data-testid="input-hero-tracking"
-                              {...field}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button 
-                    type="submit" 
-                    className="h-14 px-8 text-base bg-secondary hover:bg-secondary/90 text-white shadow-lg"
-                    data-testid="btn-hero-track"
-                  >
-                    Track Package
-                  </Button>
-                </form>
-              </Form>
-            </motion.div>
-          </div>
-        </div>
-      </section>
+              {/* Tracking form */}
+              <div className="bg-white rounded-sm shadow-lg overflow-hidden">
+                <div className="bg-[#FF6200] px-5 py-3">
+                  <h2 className="text-white font-bold text-base uppercase tracking-wide">Track a Shipment</h2>
+                </div>
+                <div className="p-5">
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)}>
+                      <FormField
+                        control={form.control}
+                        name="trackingNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <input
+                                {...field}
+                                placeholder="Enter tracking number (e.g. CPX1234567890)"
+                                data-testid="input-hero-tracking"
+                                className="w-full border border-gray-300 rounded-sm px-4 py-3 text-sm focus:outline-none focus:border-[#4D148C] focus:ring-1 focus:ring-[#4D148C] placeholder-gray-400"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex items-center justify-between mt-4">
+                        <button
+                          type="submit"
+                          data-testid="btn-hero-track"
+                          className="bg-[#FF6200] hover:bg-[#e05600] text-white font-bold text-sm px-6 py-2.5 rounded-sm transition-colors"
+                        >
+                          Track
+                        </button>
+                        <button
+                          type="button"
+                          className="text-[#4D148C] text-sm font-semibold hover:underline"
+                          onClick={() => setLocation("/track")}
+                        >
+                          Advanced tracking options
+                        </button>
+                      </div>
+                    </form>
+                  </Form>
 
-      {/* Services Overview */}
-      <section className="py-20 md:py-32 bg-slate-50">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Core Logistics Solutions</h2>
-            <p className="text-lg text-muted-foreground">
-              From local deliveries to complex international supply chains, we provide the infrastructure your business needs to thrive.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {services.map((service, i) => (
-              <motion.div
-                key={service.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-              >
-                <Card className="h-full border-none shadow-lg hover:shadow-xl transition-shadow bg-white hover:-translate-y-1 duration-300">
-                  <CardContent className="p-8">
-                    <div className="bg-primary/5 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                      <service.icon className="h-8 w-8 text-primary" />
+                  {/* Demo codes */}
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Demo tracking numbers:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {["CPX1234567890", "CPX9876543210", "CPX5551234567", "CPX1112223334"].map((code) => (
+                        <button
+                          key={code}
+                          type="button"
+                          onClick={() => {
+                            form.setValue("trackingNumber", code);
+                            setLocation(`/track?number=${code}`);
+                          }}
+                          className="text-[#4D148C] text-xs font-mono bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2 py-1 rounded transition-colors"
+                        >
+                          {code}
+                        </button>
+                      ))}
                     </div>
-                    <h3 className="text-xl font-bold mb-3">{service.title}</h3>
-                    <p className="text-muted-foreground mb-6 line-clamp-3">
-                      {service.desc}
-                    </p>
-                    <Button variant="link" className="p-0 h-auto text-secondary hover:text-secondary/80 font-semibold group">
-                      Learn more <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-          
-          <div className="mt-12 text-center">
-            <Button 
-              variant="outline" 
-              className="border-primary text-primary hover:bg-primary/5"
-              onClick={() => setLocation("/services")}
-            >
-              View All Services
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-20 bg-primary text-white">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-white/10">
-            <div>
-              <div className="text-4xl md:text-5xl font-bold mb-2">99.9%</div>
-              <div className="text-white/70 font-medium">On-Time Delivery</div>
-            </div>
-            <div>
-              <div className="text-4xl md:text-5xl font-bold mb-2">220+</div>
-              <div className="text-white/70 font-medium">Countries Served</div>
-            </div>
-            <div>
-              <div className="text-4xl md:text-5xl font-bold mb-2">15M+</div>
-              <div className="text-white/70 font-medium">Packages Annually</div>
-            </div>
-            <div>
-              <div className="text-4xl md:text-5xl font-bold mb-2">24/7</div>
-              <div className="text-white/70 font-medium">Customer Support</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 md:py-32">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="bg-slate-900 rounded-3xl overflow-hidden shadow-2xl relative flex flex-col md:flex-row items-center">
-            <div className="md:w-1/2 p-10 md:p-16 relative z-10">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Ready to ship with confidence?</h2>
-              <p className="text-slate-300 mb-8 text-lg">
-                Create an account today to schedule pickups, manage multiple shipments, and access volume discounts.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
-                  className="bg-secondary hover:bg-secondary/90 text-white h-12 px-8 text-base"
-                  onClick={() => setLocation("/schedule-pickup")}
-                >
-                  Schedule Pickup
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="bg-transparent border-white text-white hover:bg-white/10 h-12 px-8 text-base"
-                  onClick={() => setLocation("/contact")}
-                >
-                  Contact Sales
-                </Button>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="md:w-1/2 h-64 md:h-auto w-full relative">
-              <img 
-                src="https://images.unsplash.com/photo-1577717903315-1691ae25ab3f?q=80&w=2070&auto=format&fit=crop" 
-                alt="Delivery professional" 
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-slate-900 via-slate-900/60 to-transparent"></div>
+
+            {/* Right: quick action links */}
+            <div className="hidden md:block">
+              <div className="bg-white/10 rounded-sm p-6">
+                <h3 className="text-white font-bold text-lg mb-4">Quick Actions</h3>
+                <div className="space-y-3">
+                  {quickLinks.map((item) => (
+                    <button
+                      key={item.label}
+                      onClick={() => setLocation(item.href)}
+                      className="w-full flex items-center justify-between text-left text-white/90 hover:text-white hover:bg-white/10 px-4 py-3 rounded-sm transition-colors group"
+                    >
+                      <span className="font-medium">{item.label}</span>
+                      <ChevronRight className="h-4 w-4 opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Orange strip */}
+      <div className="bg-[#FF6200] py-3">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p className="text-white font-bold text-sm">
+            Need help? Call 1.800.GoFedEx (1.800.463.3339) — available 24/7
+          </p>
+          <button
+            onClick={() => setLocation("/contact")}
+            className="text-white font-bold text-sm underline hover:no-underline whitespace-nowrap"
+          >
+            Contact Support
+          </button>
+        </div>
+      </div>
+
+      {/* Services */}
+      <section className="py-14 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-2xl md:text-3xl font-black text-gray-900 mb-2">FedEx Services</h2>
+          <p className="text-gray-500 mb-8">Choose the service that fits your shipping needs and budget.</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {services.map((service) => (
+              <div
+                key={service.title}
+                className="border border-gray-200 rounded-sm p-6 hover:shadow-md transition-shadow group cursor-pointer"
+                onClick={() => setLocation(service.href)}
+              >
+                <div
+                  className="w-12 h-12 rounded-sm flex items-center justify-center mb-4"
+                  style={{ backgroundColor: service.color + "15" }}
+                >
+                  <service.icon className="h-6 w-6" style={{ color: service.color }} />
+                </div>
+                <h3 className="font-bold text-gray-900 mb-2 group-hover:text-[#4D148C] transition-colors">{service.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{service.desc}</p>
+                <div className="flex items-center gap-1 mt-4 text-[#4D148C] text-sm font-semibold">
+                  Learn more <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Stats strip */}
+      <section className="bg-gray-50 border-y border-gray-200 py-10">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            {[
+              { value: "99.9%", label: "On-Time Delivery Rate" },
+              { value: "220+", label: "Countries & Territories" },
+              { value: "15M+", label: "Packages Delivered Daily" },
+              { value: "24/7", label: "Customer Support" },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <div className="text-3xl md:text-4xl font-black text-[#4D148C] mb-1">{stat.value}</div>
+                <div className="text-sm text-gray-500 font-medium">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA — Ship now */}
+      <section className="py-14 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="bg-[#4D148C] rounded-sm overflow-hidden flex flex-col md:flex-row">
+            <div className="flex-1 p-8 md:p-12">
+              <h2 className="text-2xl md:text-3xl font-black text-white mb-3">
+                Ready to ship?
+              </h2>
+              <p className="text-purple-200 mb-8 max-w-md">
+                Create your shipment in minutes. Get instant rates, print labels, and schedule a pickup — all in one place.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => setLocation("/schedule-pickup")}
+                  data-testid="btn-cta-pickup"
+                  className="bg-[#FF6200] hover:bg-[#e05600] text-white font-bold px-6 py-3 rounded-sm transition-colors text-sm"
+                >
+                  Schedule a Pickup
+                </button>
+                <button
+                  onClick={() => setLocation("/pricing")}
+                  data-testid="btn-cta-rates"
+                  className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-[#4D148C] font-bold px-6 py-3 rounded-sm transition-colors text-sm"
+                >
+                  Get Rates
+                </button>
+              </div>
+            </div>
+            <div className="md:w-80 relative hidden md:block">
+              <img
+                src="https://images.unsplash.com/photo-1580674285054-bed31e145f59?q=80&w=800&auto=format&fit=crop"
+                alt="FedEx delivery"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#4D148C] via-[#4D148C]/30 to-transparent" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-14 bg-gray-50 border-t border-gray-200">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-2xl font-black text-gray-900 mb-8 text-center">What customers are saying</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                quote: "FedEx has been our go-to shipping partner for 8 years. Their tracking system is second to none.",
+                name: "Sarah M.",
+                role: "Operations Director, RetailCo",
+              },
+              {
+                quote: "International shipments used to be a headache. FedEx handles customs seamlessly — we just ship.",
+                name: "James K.",
+                role: "CEO, GlobalTech Imports",
+              },
+              {
+                quote: "Overnight delivery, every time, without fail. Our medical supplies always arrive on time.",
+                name: "Dr. Patricia N.",
+                role: "Procurement Manager, MedSupply",
+              },
+            ].map((t) => (
+              <div key={t.name} className="bg-white border border-gray-200 rounded-sm p-6">
+                <div className="text-[#FF6200] text-2xl font-black mb-3">"</div>
+                <p className="text-gray-700 text-sm leading-relaxed mb-4">{t.quote}</p>
+                <div>
+                  <p className="font-bold text-gray-900 text-sm">{t.name}</p>
+                  <p className="text-gray-500 text-xs">{t.role}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
