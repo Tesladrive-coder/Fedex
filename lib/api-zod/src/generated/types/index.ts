@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminDeleteShipment200';
+export * from './adminShipmentInput';
 export * from './contactInput';
 export * from './contactResponse';
 export * from './dashboardStats';
@@ -16,5 +18,7 @@ export * from './pickupInput';
 export * from './pickupResponse';
 export * from './shipment';
 export * from './shipmentInput';
+export * from './statusUpdateInput';
 export * from './trackingEvent';
+export * from './trackingEventInput';
 export * from './trackingResult';

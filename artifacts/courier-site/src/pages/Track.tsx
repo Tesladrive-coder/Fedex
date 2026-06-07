@@ -36,6 +36,8 @@ export default function Track() {
     query: {
       enabled: !!trackingNumber,
       queryKey: getTrackPackageQueryKey(trackingNumber),
+      refetchInterval: trackingNumber ? 5000 : false,
+      refetchIntervalInBackground: false,
     },
   });
 

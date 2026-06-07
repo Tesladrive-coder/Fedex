@@ -99,6 +99,30 @@ export interface PickupResponse {
   message: string;
 }
 
+export interface AdminShipmentInput {
+  trackingNumber: string;
+  service: string;
+  origin: string;
+  destination: string;
+  weight: string;
+  estimatedDelivery?: string;
+  status?: string;
+  insured?: boolean;
+  cost?: number;
+}
+
+export interface StatusUpdateInput {
+  status: string;
+  estimatedDelivery?: string;
+}
+
+export interface TrackingEventInput {
+  location: string;
+  status: string;
+  description: string;
+  timestamp?: string;
+}
+
 export interface DashboardStats {
   totalShipments: number;
   activeShipments: number;
@@ -106,4 +130,8 @@ export interface DashboardStats {
   pendingPickups: number;
   totalSpent: number;
 }
+
+export type AdminDeleteShipment200 = {
+  success: boolean;
+};
 

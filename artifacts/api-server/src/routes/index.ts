@@ -5,6 +5,7 @@ import shipmentsRouter from "./shipments";
 import servicesRouter from "./services";
 import contactRouter from "./contact";
 import dashboardRouter from "./dashboard";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(shipmentsRouter);
 router.use(servicesRouter);
 router.use(contactRouter);
 router.use(dashboardRouter);
+router.use(adminRouter);
 
 export default router;

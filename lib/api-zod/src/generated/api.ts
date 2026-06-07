@@ -176,3 +176,92 @@ export const GetRecentShipmentsResponseItem = zod.object({
 export const GetRecentShipmentsResponse = zod.array(GetRecentShipmentsResponseItem)
 
 
+/**
+ * @summary List all shipments (admin)
+ */
+export const AdminListShipmentsResponseItem = zod.object({
+  "id": zod.number(),
+  "trackingNumber": zod.string(),
+  "status": zod.string(),
+  "service": zod.string(),
+  "origin": zod.string(),
+  "destination": zod.string(),
+  "estimatedDelivery": zod.string().nullish(),
+  "weight": zod.string().nullish(),
+  "cost": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "insured": zod.boolean()
+})
+export const AdminListShipmentsResponse = zod.array(AdminListShipmentsResponseItem)
+
+
+/**
+ * @summary Create a new shipment with custom tracking number (admin)
+ */
+export const AdminCreateShipmentBody = zod.object({
+  "trackingNumber": zod.string(),
+  "service": zod.string(),
+  "origin": zod.string(),
+  "destination": zod.string(),
+  "weight": zod.string(),
+  "estimatedDelivery": zod.string().optional(),
+  "status": zod.string().optional(),
+  "insured": zod.boolean().optional(),
+  "cost": zod.number().optional()
+})
+
+
+/**
+ * @summary Update shipment status (admin)
+ */
+export const AdminUpdateStatusParams = zod.object({
+  "trackingNumber": zod.coerce.string()
+})
+
+export const AdminUpdateStatusBody = zod.object({
+  "status": zod.string(),
+  "estimatedDelivery": zod.string().optional()
+})
+
+export const AdminUpdateStatusResponse = zod.object({
+  "id": zod.number(),
+  "trackingNumber": zod.string(),
+  "status": zod.string(),
+  "service": zod.string(),
+  "origin": zod.string(),
+  "destination": zod.string(),
+  "estimatedDelivery": zod.string().nullish(),
+  "weight": zod.string().nullish(),
+  "cost": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "insured": zod.boolean()
+})
+
+
+/**
+ * @summary Add a tracking event to a shipment (admin)
+ */
+export const AdminAddEventParams = zod.object({
+  "trackingNumber": zod.coerce.string()
+})
+
+export const AdminAddEventBody = zod.object({
+  "location": zod.string(),
+  "status": zod.string(),
+  "description": zod.string(),
+  "timestamp": zod.string().optional()
+})
+
+
+/**
+ * @summary Delete a shipment (admin)
+ */
+export const AdminDeleteShipmentParams = zod.object({
+  "trackingNumber": zod.coerce.string()
+})
+
+export const AdminDeleteShipmentResponse = zod.object({
+  "success": zod.boolean()
+})
+
+

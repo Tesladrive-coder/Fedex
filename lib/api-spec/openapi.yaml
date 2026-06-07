@@ -19,6 +19,8 @@ tags:
     description: Contact and support
   - name: dashboard
     description: Customer dashboard
+  - name: admin
+    description: Admin operations
 paths:
   /healthz:
     get:
@@ -196,6 +198,135 @@ paths:
                 items:
                   $ref: "#/components/schemas/Shipment"
 
+  /admin/shipments:
+    get:
+      operationId: adminListShipments
+      tags: [admin]
+      summary: List all shipments (admin)
+      responses:
+        "200":
+          description: All shipments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shipment"
+    post:
+      operationId: adminCreateShipment
+      tags: [admin]
+      summary: Create a new shipment with custom tracking number (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminShipmentInput"
+      responses:
+        "201":
+          description: Shipment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shipment"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/shipments/{trackingNumber}/status:
+    patch:
+      operationId: adminUpdateStatus
+      tags: [admin]
+      summary: Update shipment status (admin)
+      parameters:
+        - name: trackingNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusUpdateInput"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shipment"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/shipments/{trackingNumber}/events:
+    post:
+      operationId: adminAddEvent
+      tags: [admin]
+      summary: Add a tracking event to a shipment (admin)
+      parameters:
+        - name: trackingNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrackingEventInput"
+      responses:
+        "201":
+          description: Event added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackingEvent"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/shipments/{trackingNumber}:
+    delete:
+      operationId: adminDeleteShipment
+      tags: [admin]
+      summary: Delete a shipment (admin)
+      parameters:
+        - name: trackingNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required: [success]
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -364,6 +495,51 @@ components:
         message:
           type: string
       required: [success, confirmationCode, message]
+
+    AdminShipmentInput:
+      type: object
+      properties:
+        trackingNumber:
+          type: string
+        service:
+          type: string
+        origin:
+          type: string
+        destination:
+          type: string
+        weight:
+          type: string
+        estimatedDelivery:
+          type: string
+        status:
+          type: string
+        insured:
+          type: boolean
+        cost:
+          type: number
+      required: [trackingNumber, service, origin, destination, weight]
+
+    StatusUpdateInput:
+      type: object
+      properties:
+        status:
+          type: string
+        estimatedDelivery:
+          type: string
+      required: [status]
+
+    TrackingEventInput:
+      type: object
+      properties:
+        location:
+          type: string
+        status:
+          type: string
+        description:
+          type: string
+        timestamp:
+          type: string
+      required: [location, status, description]
 
     DashboardStats:
       type: object
