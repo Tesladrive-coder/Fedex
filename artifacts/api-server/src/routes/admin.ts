@@ -1,9 +1,52 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { eq } from "drizzle-orm";
+import { createHmac } from "crypto";
 import { db, shipmentsTable, trackingEventsTable } from "@workspace/db";
 import { z } from "zod";
 
 const router: IRouter = Router();
+
+// ---------------------------------------------------------------------------
+// Token helpers
+// ---------------------------------------------------------------------------
+
+function getExpectedToken(): string {
+  const secret = process.env.SESSION_SECRET ?? "dev-secret";
+  const password = process.env.ADMIN_PASSWORD ?? "admin";
+  return createHmac("sha256", secret).update("admin-" + password).digest("hex");
+}
+
+function requireAdminAuth(req: Request, res: Response, next: NextFunction): void {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  if (!token || token !== getExpectedToken()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  next();
+}
+
+// ---------------------------------------------------------------------------
+// Auth endpoint (no token required)
+// ---------------------------------------------------------------------------
+
+router.post("/admin/auth", (req, res): void => {
+  const { password } = req.body as { password?: string };
+
+  const adminPassword = process.env.ADMIN_PASSWORD ?? "admin";
+
+  if (!password || password !== adminPassword) {
+    res.status(401).json({ error: "Invalid password" });
+    return;
+  }
+
+  res.json({ token: getExpectedToken() });
+});
+
+// ---------------------------------------------------------------------------
+// Schemas
+// ---------------------------------------------------------------------------
 
 const AdminShipmentInputSchema = z.object({
   trackingNumber: z.string().min(1),
@@ -45,7 +88,11 @@ function mapShipment(s: typeof shipmentsTable.$inferSelect) {
   };
 }
 
-router.get("/admin/shipments", async (_req, res): Promise<void> => {
+// ---------------------------------------------------------------------------
+// Protected admin routes
+// ---------------------------------------------------------------------------
+
+router.get("/admin/shipments", requireAdminAuth, async (_req, res): Promise<void> => {
   const shipments = await db
     .select()
     .from(shipmentsTable)
@@ -53,7 +100,7 @@ router.get("/admin/shipments", async (_req, res): Promise<void> => {
   res.json(shipments.map(mapShipment));
 });
 
-router.post("/admin/shipments", async (req, res): Promise<void> => {
+router.post("/admin/shipments", requireAdminAuth, async (req, res): Promise<void> => {
   const parsed = AdminShipmentInputSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -95,7 +142,7 @@ router.post("/admin/shipments", async (req, res): Promise<void> => {
   res.status(201).json(mapShipment(shipment));
 });
 
-router.patch("/admin/shipments/:trackingNumber/status", async (req, res): Promise<void> => {
+router.patch("/admin/shipments/:trackingNumber/status", requireAdminAuth, async (req, res): Promise<void> => {
   const { trackingNumber } = req.params;
 
   const parsed = StatusUpdateSchema.safeParse(req.body);
@@ -125,7 +172,7 @@ router.patch("/admin/shipments/:trackingNumber/status", async (req, res): Promis
   res.json(mapShipment(updated));
 });
 
-router.post("/admin/shipments/:trackingNumber/events", async (req, res): Promise<void> => {
+router.post("/admin/shipments/:trackingNumber/events", requireAdminAuth, async (req, res): Promise<void> => {
   const { trackingNumber } = req.params;
 
   const [shipment] = await db
@@ -165,7 +212,7 @@ router.post("/admin/shipments/:trackingNumber/events", async (req, res): Promise
   });
 });
 
-router.delete("/admin/shipments/:trackingNumber", async (req, res): Promise<void> => {
+router.delete("/admin/shipments/:trackingNumber", requireAdminAuth, async (req, res): Promise<void> => {
   const { trackingNumber } = req.params;
 
   const [deleted] = await db

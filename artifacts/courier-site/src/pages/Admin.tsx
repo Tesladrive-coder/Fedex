@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 import {
   useAdminListShipments,
   getAdminListShipmentsQueryKey,
@@ -22,6 +23,10 @@ import {
   Loader2,
   AlertTriangle,
   RefreshCw,
+  Lock,
+  LogOut,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 const STATUSES = [
@@ -34,6 +39,8 @@ const STATUSES = [
 ];
 
 const SERVICES = ["express", "overnight", "domestic", "international"];
+
+const TOKEN_KEY = "admin_token";
 
 function statusBadge(status: string) {
   const s = status.toLowerCase();
@@ -64,12 +71,110 @@ type Shipment = {
   weight?: string | null;
 };
 
-export default function Admin() {
-  const queryClient = useQueryClient();
+// ---------------------------------------------------------------------------
+// Login screen
+// ---------------------------------------------------------------------------
 
-  useEffect(() => {
-    document.title = "Admin Panel | FedEx";
-  }, []);
+function LoginForm({ onSuccess }: { onSuccess: (token: string) => void }) {
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json() as { token?: string; error?: string };
+      if (!res.ok || !data.token) {
+        setError(data.error ?? "Invalid password");
+      } else {
+        sessionStorage.setItem(TOKEN_KEY, data.token);
+        onSuccess(data.token);
+      }
+    } catch {
+      setError("Network error — is the server running?");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Layout>
+      <div className="bg-[#4D148C] py-8">
+        <div className="max-w-7xl mx-auto px-4">
+          <h1 className="text-2xl md:text-3xl font-black text-white">Admin Panel</h1>
+          <p className="text-purple-200 text-sm mt-1">Restricted access — login required</p>
+        </div>
+      </div>
+      <div className="bg-gray-50 min-h-screen flex items-start justify-center pt-20 px-4">
+        <div className="bg-white border border-gray-200 rounded-sm shadow-sm w-full max-w-sm overflow-hidden">
+          <div className="bg-[#4D148C] px-6 py-4 flex items-center gap-3">
+            <Lock className="h-5 w-5 text-white" />
+            <span className="font-black text-white text-sm uppercase tracking-wide">Admin Login</span>
+          </div>
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
+                Admin Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter admin password"
+                  autoFocus
+                  className="w-full border border-gray-300 rounded-sm px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#4D148C]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-sm px-3 py-2 text-sm text-red-700">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || !password}
+              className="w-full bg-[#4D148C] hover:bg-[#3a0f6f] text-white font-bold text-sm py-2.5 rounded-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+              {loading ? "Logging in..." : "Login"}
+            </button>
+
+            <p className="text-xs text-gray-400 text-center">
+              Set your password via the <strong>ADMIN_PASSWORD</strong> environment variable.
+            </p>
+          </form>
+        </div>
+      </div>
+    </Layout>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main admin panel
+// ---------------------------------------------------------------------------
+
+function AdminPanel({ onLogout }: { onLogout: () => void }) {
+  const queryClient = useQueryClient();
 
   const { data: shipments, isLoading, refetch } = useAdminListShipments({
     query: { queryKey: getAdminListShipmentsQueryKey(), refetchInterval: 5000 },
@@ -96,7 +201,6 @@ export default function Admin() {
 
   const [statusUpdates, setStatusUpdates] = useState<Record<string, { status: string; estimatedDelivery: string }>>({});
   const [newEvents, setNewEvents] = useState<Record<string, { location: string; status: string; description: string }>>({});
-
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
   function showToast(msg: string, type: "success" | "error" = "success") {
@@ -134,10 +238,7 @@ export default function Admin() {
     statusMutation.mutate(
       { trackingNumber, data: { status: update.status, estimatedDelivery: update.estimatedDelivery || undefined } },
       {
-        onSuccess: () => {
-          showToast(`Status updated to "${update.status}"`);
-          invalidate();
-        },
+        onSuccess: () => { showToast(`Status updated to "${update.status}"`); invalidate(); },
         onError: () => showToast("Failed to update status", "error"),
       }
     );
@@ -183,14 +284,12 @@ export default function Admin() {
 
   return (
     <Layout>
-      {/* Toast */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-sm shadow-lg text-sm font-semibold text-white transition-all ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}>
           {toast.msg}
         </div>
       )}
 
-      {/* Header */}
       <div className="bg-[#4D148C] py-8">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between flex-wrap gap-4">
           <div>
@@ -210,6 +309,12 @@ export default function Admin() {
             >
               <Plus className="h-4 w-4" /> New Shipment
             </button>
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold px-4 py-2 rounded-sm transition-colors border border-white/20"
+            >
+              <LogOut className="h-4 w-4" /> Logout
+            </button>
           </div>
         </div>
       </div>
@@ -217,7 +322,6 @@ export default function Admin() {
       <div className="bg-gray-50 min-h-screen">
         <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
 
-          {/* Create shipment form */}
           {showCreateForm && (
             <div className="bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
               <div className="bg-[#FF6200] px-6 py-3 flex items-center gap-2">
@@ -322,7 +426,6 @@ export default function Admin() {
             </div>
           )}
 
-          {/* Shipments table */}
           <div className="bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-black text-gray-900 flex items-center gap-2">
@@ -356,7 +459,6 @@ export default function Admin() {
 
                   return (
                     <div key={shipment.trackingNumber}>
-                      {/* Row */}
                       <div
                         className="px-6 py-4 flex flex-wrap items-center gap-4 cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => setExpandedRow(isExpanded ? null : shipment.trackingNumber)}
@@ -384,16 +486,12 @@ export default function Admin() {
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
-                          {isExpanded
-                            ? <ChevronUp className="h-4 w-4 text-gray-400" />
-                            : <ChevronDown className="h-4 w-4 text-gray-400" />}
+                          {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
                         </div>
                       </div>
 
-                      {/* Expanded panel */}
                       {isExpanded && (
                         <div className="border-t border-gray-100 bg-gray-50 px-6 py-5 grid md:grid-cols-2 gap-6">
-                          {/* Update status */}
                           <div className="bg-white border border-gray-200 rounded-sm p-4">
                             <h3 className="font-black text-sm text-gray-900 mb-3 flex items-center gap-2">
                               <Truck className="h-4 w-4 text-[#4D148C]" />
@@ -430,7 +528,6 @@ export default function Admin() {
                             </div>
                           </div>
 
-                          {/* Add tracking event */}
                           <div className="bg-white border border-gray-200 rounded-sm p-4">
                             <h3 className="font-black text-sm text-gray-900 mb-3 flex items-center gap-2">
                               <MapPin className="h-4 w-4 text-[#FF6200]" />
@@ -475,7 +572,6 @@ export default function Admin() {
                             </div>
                           </div>
 
-                          {/* Preview link */}
                           <div className="md:col-span-2">
                             <a
                               href={`/track?number=${shipment.trackingNumber}`}
@@ -496,7 +592,6 @@ export default function Admin() {
             )}
           </div>
 
-          {/* Info box */}
           <div className="bg-white border border-gray-200 rounded-sm p-4 flex items-start gap-3">
             <AlertTriangle className="h-4 w-4 text-[#FF6200] mt-0.5 flex-shrink-0" />
             <div className="text-xs text-gray-500 leading-relaxed">
@@ -507,4 +602,39 @@ export default function Admin() {
       </div>
     </Layout>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Root component — handles auth state
+// ---------------------------------------------------------------------------
+
+export default function Admin() {
+  const [token, setToken] = useState<string | null>(() => sessionStorage.getItem(TOKEN_KEY));
+
+  useEffect(() => {
+    document.title = "Admin Panel | FedEx";
+  }, []);
+
+  const applyToken = useCallback((t: string) => {
+    setAuthTokenGetter(() => t);
+    setToken(t);
+  }, []);
+
+  useEffect(() => {
+    if (token) {
+      setAuthTokenGetter(() => token);
+    }
+  }, [token]);
+
+  function handleLogout() {
+    sessionStorage.removeItem(TOKEN_KEY);
+    setAuthTokenGetter(null);
+    setToken(null);
+  }
+
+  if (!token) {
+    return <LoginForm onSuccess={applyToken} />;
+  }
+
+  return <AdminPanel onLogout={handleLogout} />;
 }
