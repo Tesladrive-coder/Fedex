@@ -1,0 +1,24 @@
+{
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm run build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": "express",
+  "functions": {
+    "artifacts/api-server/dist/index.mjs": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "artifacts/api-server/dist/index.mjs",
+      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    },
+    {
+      "src": "/(.*)",
+      "dest": "artifacts/api-server/dist/index.mjs"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
