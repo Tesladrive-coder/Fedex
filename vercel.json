@@ -4,7 +4,7 @@
   "framework": "express",
   "functions": {
     "artifacts/api-server/dist/index.mjs": {
-      "runtime": "nodejs20.x"
+      "runtime": "@vercel/node@3.1.0"
     }
   },
   "routes": [
