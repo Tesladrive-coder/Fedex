@@ -1,22 +1,10 @@
 {
-  "buildCommand": "pnpm install --frozen-lockfile && pnpm run build",
-  "installCommand": "pnpm install --frozen-lockfile",
-  "framework": "express",
-  "functions": {
-    "artifacts/api-server/dist/index.mjs": {
-      "runtime": "@vercel/node@3.1.0"
-    }
-  },
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "artifacts/api-server/dist/index.mjs",
-      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-    },
-    {
-      "src": "/(.*)",
-      "dest": "artifacts/api-server/dist/index.mjs"
-    }
+  "version": 2,
+  "buildCommand": "pnpm install && pnpm --filter @workspace/courier-site run build",
+  "outputDirectory": "artifacts/courier-site/dist/public",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api" },
+    { "source": "/((?!api).*)", "destination": "/index.html" }
   ],
   "env": {
     "NODE_ENV": "production"
