@@ -31,7 +31,7 @@ function requireAdminAuth(req: Request, res: Response, next: NextFunction): void
 // Auth endpoint (no token required)
 // ---------------------------------------------------------------------------
 
-router.post("/admin/auth", (req, res): void => {
+router.post("/admin/auth", (req: Request, res: Response): void => {
   const { password } = req.body as { password?: string };
 
   const adminPassword = process.env.ADMIN_PASSWORD ?? "admin";
@@ -92,7 +92,7 @@ function mapShipment(s: typeof shipmentsTable.$inferSelect) {
 // Protected admin routes
 // ---------------------------------------------------------------------------
 
-router.get("/admin/shipments", requireAdminAuth, async (_req, res): Promise<void> => {
+router.get("/admin/shipments", requireAdminAuth, async (_req: Request, res: Response): Promise<void> => {
   const shipments = await db
     .select()
     .from(shipmentsTable)
@@ -100,7 +100,7 @@ router.get("/admin/shipments", requireAdminAuth, async (_req, res): Promise<void
   res.json(shipments.map(mapShipment));
 });
 
-router.post("/admin/shipments", requireAdminAuth, async (req, res): Promise<void> => {
+router.post("/admin/shipments", requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
   const parsed = AdminShipmentInputSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -142,8 +142,10 @@ router.post("/admin/shipments", requireAdminAuth, async (req, res): Promise<void
   res.status(201).json(mapShipment(shipment));
 });
 
-router.patch("/admin/shipments/:trackingNumber/status", requireAdminAuth, async (req, res): Promise<void> => {
-  const { trackingNumber } = req.params;
+router.patch("/admin/shipments/:trackingNumber/status", requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
+  const trackingNumber = Array.isArray(req.params.trackingNumber)
+    ? req.params.trackingNumber[0]
+    : req.params.trackingNumber;
 
   const parsed = StatusUpdateSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -172,8 +174,10 @@ router.patch("/admin/shipments/:trackingNumber/status", requireAdminAuth, async 
   res.json(mapShipment(updated));
 });
 
-router.post("/admin/shipments/:trackingNumber/events", requireAdminAuth, async (req, res): Promise<void> => {
-  const { trackingNumber } = req.params;
+router.post("/admin/shipments/:trackingNumber/events", requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
+  const trackingNumber = Array.isArray(req.params.trackingNumber)
+    ? req.params.trackingNumber[0]
+    : req.params.trackingNumber;
 
   const [shipment] = await db
     .select()
@@ -212,8 +216,10 @@ router.post("/admin/shipments/:trackingNumber/events", requireAdminAuth, async (
   });
 });
 
-router.delete("/admin/shipments/:trackingNumber", requireAdminAuth, async (req, res): Promise<void> => {
-  const { trackingNumber } = req.params;
+router.delete("/admin/shipments/:trackingNumber", requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
+  const trackingNumber = Array.isArray(req.params.trackingNumber)
+    ? req.params.trackingNumber[0]
+    : req.params.trackingNumber;
 
   const [deleted] = await db
     .delete(shipmentsTable)
