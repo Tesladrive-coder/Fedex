@@ -27,6 +27,12 @@ function requireAdminAuth(req: Request, res: Response, next: NextFunction): void
   next();
 }
 
+// Helper to extract single string from params
+function getParamAsString(value: string | string[] | undefined): string | null {
+  if (!value) return null;
+  return Array.isArray(value) ? value[0] : value;
+}
+
 // ---------------------------------------------------------------------------
 // Auth endpoint (no token required)
 // ---------------------------------------------------------------------------
@@ -143,9 +149,12 @@ router.post("/admin/shipments", requireAdminAuth, async (req: Request, res: Resp
 });
 
 router.patch("/admin/shipments/:trackingNumber/status", requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
-  const trackingNumber = Array.isArray(req.params.trackingNumber)
-    ? req.params.trackingNumber[0]
-    : req.params.trackingNumber;
+  const trackingNumber = getParamAsString(req.params.trackingNumber);
+  
+  if (!trackingNumber) {
+    res.status(400).json({ error: "Invalid tracking number" });
+    return;
+  }
 
   const parsed = StatusUpdateSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -175,9 +184,12 @@ router.patch("/admin/shipments/:trackingNumber/status", requireAdminAuth, async 
 });
 
 router.post("/admin/shipments/:trackingNumber/events", requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
-  const trackingNumber = Array.isArray(req.params.trackingNumber)
-    ? req.params.trackingNumber[0]
-    : req.params.trackingNumber;
+  const trackingNumber = getParamAsString(req.params.trackingNumber);
+  
+  if (!trackingNumber) {
+    res.status(400).json({ error: "Invalid tracking number" });
+    return;
+  }
 
   const [shipment] = await db
     .select()
@@ -217,9 +229,12 @@ router.post("/admin/shipments/:trackingNumber/events", requireAdminAuth, async (
 });
 
 router.delete("/admin/shipments/:trackingNumber", requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
-  const trackingNumber = Array.isArray(req.params.trackingNumber)
-    ? req.params.trackingNumber[0]
-    : req.params.trackingNumber;
+  const trackingNumber = getParamAsString(req.params.trackingNumber);
+  
+  if (!trackingNumber) {
+    res.status(400).json({ error: "Invalid tracking number" });
+    return;
+  }
 
   const [deleted] = await db
     .delete(shipmentsTable)
